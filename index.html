@@ -732,7 +732,8 @@ function createStore() {
       },
       checkAdmin(key) { return adminFetch('/admin/check', 'GET', key); },
       async addCircle(c, key) { await adminFetch('/circles/' + encodeURIComponent(c.id), 'PUT', key, {nombre: c.nombre, area: c.area}); this._loadCat(); },
-      async removeCircle(id, key) { await adminFetch('/circles/' + encodeURIComponent(id), 'DELETE', key); this._loadCat(); }
+      async removeCircle(id, key) { await adminFetch('/circles/' + encodeURIComponent(id), 'DELETE', key); this._loadCat(); },
+      async removeEval(key, adminKey) { await adminFetch('/evals/' + encodeURIComponent(key), 'DELETE', adminKey); this._load && this._load(); }
     };
   }
   const K = 'rdp_evals_v1', KC = 'rdp_catalog_v1';
@@ -756,7 +757,8 @@ function createStore() {
     subscribeCatalog(cb) { this._catCb = cb; cb(readCat()); },
     async checkAdmin() { return {ok: true}; },
     async addCircle(c) { const l = readCat(); l.push(c); writeCat(l); this._catCb(l); },
-    async removeCircle(id) { const l = readCat().filter(r => r.id !== id); writeCat(l); this._catCb(l); }
+    async removeCircle(id) { const l = readCat().filter(r => r.id !== id); writeCat(l); this._catCb(l); },
+    async removeEval(key) { const all = read(); delete all[key]; try { localStorage.setItem(K, JSON.stringify(all)); } catch (e) {} this._cb && this._cb(Object.entries(all).map(([_id, d]) => ({_id, ...d}))); }
   };
 }
 
@@ -951,10 +953,17 @@ function applyCatalog(list) {
 // ── Administración del catálogo ──
 var adminKey = "";
 function slugId(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 100) || 'rdp'; }
+function isAdmin() { return (db && db.mode === 'local') || !!adminKey; }
+async function delEval(key) {
+  const e = allEvals.find(x => x._id === key);
+  if (!e || !confirm('¿Borrar la evaluación de "' + e.evaluador + '" sobre "' + e.circle + '"?\nNo se puede deshacer.')) return;
+  try { await db.removeEval(key, adminKey); toast('Evaluación borrada'); } catch (err) { toast(err.message); }
+}
 function showAdmin(on) {
   document.getElementById('admLock').hidden = on;
   document.getElementById('admPanel').hidden = !on;
   if (on) renderAdminList();
+  renderResults();
 }
 async function admUnlock() {
   if (!db) return;
@@ -1094,7 +1103,7 @@ function renderResults() {
     <thead><tr>
       <th>Círculo</th><th>Evaluador</th>
       ${CRITERIA.map(c=>`<th style="color:${PDCA_C[c.pdca]}" title="${c.name}">${c.paso?'P'+c.paso:'PR'}</th>`).join('')}
-      <th>Total</th><th>%</th>
+      <th>Total</th><th>%</th>${isAdmin() ? '<th></th>' : ''}
     </tr></thead>
     <tbody>
     ${[...allEvals].sort((a,b)=>(b.total||0)-(a.total||0)).map(e => {
@@ -1109,6 +1118,7 @@ function renderResults() {
         }).join('')}
         <td><b style="color:${col}">${(e.total||0).toFixed(1)}</b></td>
         <td style="color:${col};font-weight:700">${pct.toFixed(0)}%</td>
+        ${isAdmin() ? `<td><button class="del-btn" title="Borrar evaluación" onclick="delEval(this.dataset.k)" data-k="${esc(e._id)}">🗑</button></td>` : ''}
       </tr>`;
     }).join('')}
     </tbody>
