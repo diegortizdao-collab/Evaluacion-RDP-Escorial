@@ -701,7 +701,7 @@ function createStore() {
         method, headers: {'Content-Type': 'application/json', 'X-Admin-Key': key}, body: body ? JSON.stringify(body) : undefined
       });
       if (r.status === 401) throw new Error('Clave incorrecta');
-      if (r.status === 503) throw new Error('Falta configurar ADMIN_KEY en el Worker');
+      if (r.status === 503) throw new Error('Falta configurar ADMINRDP_KEY en el Worker');
       if (!r.ok) throw new Error('Error ' + r.status);
       return r.json();
     };

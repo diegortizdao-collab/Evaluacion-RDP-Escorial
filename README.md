@@ -19,7 +19,7 @@ Bandas: ≥75 % Excelente · ≥55 % Bueno · ≥35 % En desarrollo · <35 % Ins
 - **Modo compartido**: desplegar el repo [Evaluacion-RDP-API](https://github.com/diegortizdao-collab/Evaluacion-RDP-API) y completar `API_URL`; todos los evaluadores ven el mismo ranking (se refresca cada 15 s).
 
 ## Lista de RDP a evaluar
-En la pestaña **⚙️ RDP** quienes tengan la clave de administración (`ADMIN_KEY`, secreto del Worker) agregan o quitan los RDP. Los evaluadores los eligen de una lista; en Resultados aparecen los pendientes. En modo local la lista es del dispositivo y `rdps.js` solo sirve como lista inicial.
+En la pestaña **⚙️ RDP** quienes tengan la clave de administración (`ADMINRDP_KEY`, secreto del Worker) agregan o quitan los RDP. Los evaluadores los eligen de una lista; en Resultados aparecen los pendientes. En modo local la lista es del dispositivo y `rdps.js` solo sirve como lista inicial.
 
 Una evaluación se identifica por evaluador + círculo: volver a evaluar el mismo círculo con el mismo nombre actualiza la anterior.
 
