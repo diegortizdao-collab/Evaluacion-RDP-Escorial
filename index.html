@@ -674,7 +674,7 @@ let db = null;
     if (state.circle.length >= 2 && !Object.keys(state.scores).length) loadExisting();
   }, err => {
     document.getElementById('resContent').innerHTML =
-      '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Sin conexión</div><div class="empty-text">No se pudo conectar con el servidor.<br>Recargá la página.</div></div>';
+      '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Sin conexión</div><div class="empty-text">No se pudo conectar con el servidor.<br>Recargá la página.<br><small style="opacity:.7">Detalle: ' + (err && err.message || 'error de red/CORS') + '</small></div></div>';
   });
 })();
 
