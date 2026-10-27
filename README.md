@@ -16,7 +16,7 @@ Bandas: ≥75 % Excelente · ≥55 % Bueno · ≥35 % En desarrollo · <35 % Ins
 ## Uso
 - Frontend estático (`index.html` + `config.js`), publicado con GitHub Pages.
 - **Modo local** (por defecto): `API_URL` vacío en `config.js`; se guarda en el navegador del dispositivo.
-- **Modo compartido**: desplegar `api/` (ver `api/README.md`) y completar `API_URL`; todos los evaluadores ven el mismo ranking (se refresca cada 15 s).
+- **Modo compartido**: desplegar el repo [Evaluacion-RDP-API](https://github.com/diegortizdao-collab/Evaluacion-RDP-API) y completar `API_URL`; todos los evaluadores ven el mismo ranking (se refresca cada 15 s).
 
 Una evaluación se identifica por evaluador + círculo: volver a evaluar el mismo círculo con el mismo nombre actualiza la anterior.
 
