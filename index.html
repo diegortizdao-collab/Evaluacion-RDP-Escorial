@@ -435,6 +435,7 @@ body::before {
 .mode-banner{background:var(--s2-bg);color:var(--s2-fg);border:1px solid var(--s2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;margin-top:14px}
 </style>
 <script src="config.js"></script>
+<script src="rdps.js"></script>
 
 </head>
 <body>
@@ -461,7 +462,7 @@ body::before {
     <input id="evName" class="text-input" type="text" placeholder="Ej: Carlos García" autocomplete="off" spellcheck="false">
   </div>
   <div class="field">
-    <label class="label" for="circleInput">Círculo / RDP a evaluar</label>
+    <label class="label" for="circleInput">RDP a evaluar</label>
     <input id="circleInput" class="text-input" type="text" placeholder="Ej: UET2 — Quemadores" autocomplete="off" spellcheck="false">
   </div>
 
@@ -636,8 +637,18 @@ let db = null;
   document.getElementById('evName').addEventListener('input', e => {
     state.name = e.target.value.trim();
     try { localStorage.setItem('rdp_ev_name', state.name); } catch(e){}
+    refreshCircleOptions();
     updateSubmit();
   });
+
+  const CATALOG = (window.RDP_CATALOG || []).filter(r => r && r.nombre);
+  if (CATALOG.length) {
+    const old = document.getElementById('circleInput');
+    const sel = document.createElement('select');
+    sel.id = 'circleInput'; sel.className = 'text-input';
+    old.replaceWith(sel);
+    refreshCircleOptions();
+  }
 
   document.getElementById('circleInput').addEventListener('input', e => {
     const val = e.target.value.trim();
@@ -670,6 +681,7 @@ let db = null;
     const badge = document.getElementById('evalCount');
     badge.textContent = n + (n === 1 ? ' eval' : ' evals');
     badge.hidden = n === 0;
+    refreshCircleOptions();
     renderResults();
     if (state.circle.length >= 2 && !Object.keys(state.scores).length) loadExisting();
   }, err => {
@@ -872,6 +884,31 @@ function bandColor(pct) {
   return pct >= 75 ? '#16a34a' : pct >= 55 ? '#2563eb' : pct >= 35 ? '#d97706' : '#dc2626';
 }
 
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function refreshCircleOptions() {
+  const sel = document.getElementById('circleInput');
+  const cat = (window.RDP_CATALOG || []).filter(r => r && r.nombre);
+  if (!sel || sel.tagName !== 'SELECT') return;
+  const me = (state.name || '').toLowerCase();
+  const done = new Set(allEvals.filter(e => me && (e.evaluador || '').toLowerCase() === me).map(e => (e.circle || '').toLowerCase()));
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Elegí el RDP a evaluar…</option>' + cat.map(r => {
+    const mark = done.has(r.nombre.toLowerCase()) ? '✓ ' : '';
+    return `<option value="${esc(r.nombre)}">${mark}${esc(r.nombre)}${r.area ? ' — ' + esc(r.area) : ''}</option>`;
+  }).join('');
+  sel.value = cur;
+}
+
+function pendingHtml() {
+  const cat = (window.RDP_CATALOG || []).filter(r => r && r.nombre);
+  const evaluated = new Set(allEvals.map(e => (e.circle || '').toLowerCase()));
+  const pend = cat.filter(r => !evaluated.has(r.nombre.toLowerCase()));
+  if (!pend.length) return '';
+  return `<div class="section-title">Pendientes de evaluar (${pend.length})</div><div class="card">` +
+    pend.map(r => `<div class="rank-row"><div class="rank-body"><div class="rank-name">${esc(r.nombre)}</div>${r.area ? `<div class="rank-eval-names">${esc(r.area)}</div>` : ''}</div><div class="rank-right"><span class="band-chip" style="background:var(--surface2);color:var(--fg-muted)">Sin evaluar</span></div></div>`).join('') + `</div>`;
+}
+
 function renderResults() {
   const wrap = document.getElementById('resContent');
   if (!allEvals.length) {
@@ -879,7 +916,7 @@ function renderResults() {
       <div class="empty-icon">📋</div>
       <div class="empty-title">Sin evaluaciones aún</div>
       <div class="empty-text">Completá la primera evaluación<br>desde la pestaña Evaluar.</div>
-    </div>`;
+    </div>` + pendingHtml();
     return;
   }
 
@@ -907,7 +944,7 @@ function renderResults() {
   let html = '';
 
   html += `<div class="section-title">Evaluadores activos</div>
-  <div class="ev-chips">${evNames.map(n=>`<span class="ev-chip"><span class="ev-dot"></span>${n}</span>`).join('')}</div>`;
+  <div class="ev-chips">${evNames.map(n=>`<span class="ev-chip"><span class="ev-dot"></span>${esc(n)}</span>`).join('')}</div>`;
 
   html += `<div class="section-title">Ranking General</div><div class="card">`;
   stats.forEach((s, i) => {
@@ -915,8 +952,8 @@ function renderResults() {
     html += `<div class="rank-row rank-${i+1}">
       <div class="rank-badge">${i+1}</div>
       <div class="rank-body">
-        <div class="rank-name">${s.circle}</div>
-        <div class="rank-eval-names">${s.evs.map(e=>e.evaluador).join(' · ')} · ${s.evs.length} eval${s.evs.length>1?'s':''}</div>
+        <div class="rank-name">${esc(s.circle)}</div>
+        <div class="rank-eval-names">${s.evs.map(e=>esc(e.evaluador)).join(' · ')} · ${s.evs.length} eval${s.evs.length>1?'s':''}</div>
         <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${s.pct.toFixed(1)}%;background:${col}"></div></div>
       </div>
       <div class="rank-right">
@@ -926,6 +963,7 @@ function renderResults() {
     </div>`;
   });
   html += `</div>`;
+  html += pendingHtml();
 
   html += `<div class="section-title">Detalle por criterio</div><div class="card breakdown-card">`;
   CRITERIA.forEach(c => {
@@ -934,7 +972,7 @@ function renderResults() {
       <div class="bd-track">`;
     stats.forEach(s => {
       const a = s.avgScores[c.id] || 0;
-      html += `<div class="bd-bar" style="width:${(a/4*100).toFixed(1)}%;background:${bandColor(a/4*100)}" title="${s.circle}: ${a.toFixed(2)}/4"></div>`;
+      html += `<div class="bd-bar" style="width:${(a/4*100).toFixed(1)}%;background:${bandColor(a/4*100)}" title="${esc(s.circle)}: ${a.toFixed(2)}/4"></div>`;
     });
     html += `</div>
       <div class="bd-val">${stats[0] ? (stats[0].avgScores[c.id]||0).toFixed(1)+'/4' : ''}</div>
@@ -955,8 +993,8 @@ function renderResults() {
       const pct = (e.total||0)/MAX*100;
       const col = bandColor(pct);
       return `<tr>
-        <td>${e.circle||'—'}</td>
-        <td style="color:var(--fg-muted);font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.evaluador||'—'}</td>
+        <td>${esc(e.circle)||'—'}</td>
+        <td style="color:var(--fg-muted);font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(e.evaluador)||'—'}</td>
         ${CRITERIA.map(c => {
           const v = e.scores?.[c.id];
           return `<td>${v!=null?`<span class="score-chip" style="background:${SC_C[v]}">${v}</span>`:'—'}</td>`;
