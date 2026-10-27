@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Evaluación RDP · Escorial</title>
+<style>[hidden]{display:none!important}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap">
+
+<style>
+:root {
+  --bg: #eef2ff;
+  --bg2: #e8edf8;
+  --surface: #ffffff;
+  --surface2: #f4f6fb;
+  --border: #dde3f0;
+  --border-strong: #b8c4dc;
+  --fg: #0f172a;
+  --fg-muted: #4a5680;
+  --fg-subtle: #8492b8;
+  --header-bg: #1e2d6b;
+  --header-fg: #eef2ff;
+
+  --plan: #2563eb;   --plan-bg: #dbeafe;  --plan-fg: #1e3a8a;
+  --do:   #ea580c;   --do-bg:   #ffedd5;  --do-fg:   #7c2d12;
+  --check:#16a34a;   --check-bg:#dcfce7;  --check-fg:#14532d;
+  --act:  #7c3aed;   --act-bg:  #ede9fe;  --act-fg:  #4c1d95;
+  --pres: #be123c;   --pres-bg: #ffe4e6;  --pres-fg: #881337;
+
+  --s1: #dc2626; --s1-bg: #fee2e2; --s1-fg: #7f1d1d; --s1-sel: #dc2626;
+  --s2: #d97706; --s2-bg: #fef3c7; --s2-fg: #78350f; --s2-sel: #d97706;
+  --s3: #2563eb; --s3-bg: #dbeafe; --s3-fg: #1e3a8a; --s3-sel: #2563eb;
+  --s4: #16a34a; --s4-bg: #dcfce7; --s4-fg: #14532d; --s4-sel: #16a34a;
+
+  --band-green: #16a34a;
+  --band-blue:  #2563eb;
+  --band-yellow:#d97706;
+  --band-red:   #dc2626;
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --radius-xs: 6px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f172a; --bg2: #0a1020;
+    --surface: #1e293b; --surface2: #162032;
+    --border: #2d3f5e; --border-strong: #3d5070;
+    --fg: #e8eeff; --fg-muted: #8fa0c8; --fg-subtle: #5a6e96;
+    --header-bg: #080f24; --header-fg: #c7d2f0;
+    --plan-bg: #1e3a8a30; --plan-fg: #93c5fd;
+    --do-bg: #7c2d1230; --do-fg: #fdba74;
+    --check-bg: #14532d30; --check-fg: #86efac;
+    --act-bg: #4c1d9530; --act-fg: #c4b5fd;
+    --pres-bg: #88071a30; --pres-fg: #fda4af;
+    --s1-bg: #450a0a; --s1-fg: #fca5a5;
+    --s2-bg: #451a03; --s2-fg: #fcd34d;
+    --s3-bg: #1e3a8a30; --s3-fg: #93c5fd;
+    --s4-bg: #052e16; --s4-fg: #86efac;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f172a; --bg2: #0a1020;
+  --surface: #1e293b; --surface2: #162032;
+  --border: #2d3f5e; --border-strong: #3d5070;
+  --fg: #e8eeff; --fg-muted: #8fa0c8; --fg-subtle: #5a6e96;
+  --header-bg: #080f24; --header-fg: #c7d2f0;
+  --plan-bg: #1e3a8a30; --plan-fg: #93c5fd;
+  --do-bg: #7c2d1230; --do-fg: #fdba74;
+  --check-bg: #14532d30; --check-fg: #86efac;
+  --act-bg: #4c1d9530; --act-fg: #c4b5fd;
+  --pres-bg: #88071a30; --pres-fg: #fda4af;
+  --s1-bg: #450a0a; --s1-fg: #fca5a5;
+  --s2-bg: #451a03; --s2-fg: #fcd34d;
+  --s3-bg: #1e3a8a30; --s3-fg: #93c5fd;
+  --s4-bg: #052e16; --s4-fg: #86efac;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--fg);
+  line-height: 1.5;
+  max-width: 640px;
+  margin: 0 auto;
+  min-height: 100%;
+  padding-left: max(14px, env(safe-area-inset-left, 0px));
+  padding-right: max(14px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+body::before {
+  content: "";
+  position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--header-bg);
+  z-index: 20;
+}
+
+/* ── Header ── */
+.app-header {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 10;
+  background: var(--header-bg);
+  color: var(--header-fg);
+  padding: 14px 0 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.header-logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-dot {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, #4f8ef7, #2563eb);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.header-title { font-size: 15px; font-weight: 800; letter-spacing: -.1px; }
+.header-sub { font-size: 11px; opacity: .6; font-weight: 400; }
+.header-badge {
+  flex-shrink: 0;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-size: 11px; font-weight: 700;
+}
+
+/* ── Tabs ── */
+.tabs {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 50px);
+  z-index: 9;
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  box-shadow: 0 2px 12px rgba(30,45,107,.07);
+}
+.tab-btn {
+  padding: 13px 8px;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  background: none; border: none;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: var(--fg-muted); cursor: pointer;
+  transition: color .15s, border-color .15s;
+  letter-spacing: .1px;
+}
+.tab-btn.active { color: var(--plan); border-bottom-color: var(--plan); }
+
+.tab-pane { display: none; padding-block: 20px 56px; }
+.tab-pane.active { display: block; }
+
+/* ── Fields ── */
+.field { margin-bottom: 16px; }
+.label {
+  display: block; font-size: 11px; font-weight: 800;
+  color: var(--fg-muted); text-transform: uppercase;
+  letter-spacing: .7px; margin-bottom: 7px;
+}
+.text-input {
+  width: 100%; padding: 13px 16px;
+  font-family: inherit; font-size: 15px; font-weight: 500;
+  background: var(--surface); color: var(--fg);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.text-input:focus {
+  border-color: var(--plan);
+  box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+}
+
+/* ── PDCA section divider ── */
+.pdca-section {
+  margin: 22px 0 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.pdca-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.pdca-line {
+  flex: 1; height: 1px; background: var(--border);
+}
+.pdca-label {
+  font-size: 11px; font-weight: 600; color: var(--fg-subtle);
+  flex-shrink: 0;
+}
+
+/* ── Criterion card ── */
+.crit-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color .2s, box-shadow .2s;
+}
+.crit-card.done {
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 10px rgba(30,45,107,.07);
+}
+
+.crit-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 14px 11px;
+  border-left: 4px solid transparent;
+}
+.paso-num {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900;
+  flex-shrink: 0;
+}
+.crit-info { flex: 1; min-width: 0; }
+.crit-name { font-size: 14px; font-weight: 700; line-height: 1.3; }
+.crit-focus { font-size: 11px; color: var(--fg-muted); margin-top: 1px; }
+.crit-pts {
+  flex-shrink: 0;
+  font-size: 12px; font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--surface2);
+  color: var(--fg-muted);
+}
+.crit-pts.scored { background: var(--plan-bg); color: var(--plan-fg); }
+
+/* ── Score buttons ── */
+.score-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  padding: 0 12px 12px;
+}
+.sc-btn {
+  padding: 14px 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background: var(--surface2);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  position: relative;
+}
+.sc-btn .sc-num {
+  font-size: 28px; font-weight: 900; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sc-btn .sc-lbl {
+  font-size: 10px; font-weight: 700; letter-spacing: .2px; line-height: 1.2;
+}
+.sc-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,.1); }
+
+/* neutral unselected */
+.sc-btn[data-val="1"] { background: #fff1f1; border-color: #fca5a5; }
+.sc-btn[data-val="1"] .sc-num { color: #dc2626; }
+.sc-btn[data-val="1"] .sc-lbl { color: #991b1b; }
+
+.sc-btn[data-val="2"] { background: #fffbeb; border-color: #fcd34d; }
+.sc-btn[data-val="2"] .sc-num { color: #d97706; }
+.sc-btn[data-val="2"] .sc-lbl { color: #78350f; }
+
+.sc-btn[data-val="3"] { background: #eff6ff; border-color: #93c5fd; }
+.sc-btn[data-val="3"] .sc-num { color: #2563eb; }
+.sc-btn[data-val="3"] .sc-lbl { color: #1e3a8a; }
+
+.sc-btn[data-val="4"] { background: #f0fdf4; border-color: #86efac; }
+.sc-btn[data-val="4"] .sc-num { color: #16a34a; }
+.sc-btn[data-val="4"] .sc-lbl { color: #14532d; }
+
+/* selected state — solid fill */
+.sc-btn.sel[data-val="1"] { background: #dc2626; border-color: #dc2626; box-shadow: 0 3px 12px rgba(220,38,38,.4); transform: translateY(-2px); }
+.sc-btn.sel[data-val="1"] .sc-num,
+.sc-btn.sel[data-val="1"] .sc-lbl { color: #fff; }
+
+.sc-btn.sel[data-val="2"] { background: #d97706; border-color: #d97706; box-shadow: 0 3px 12px rgba(217,119,6,.4); transform: translateY(-2px); }
+.sc-btn.sel[data-val="2"] .sc-num,
+.sc-btn.sel[data-val="2"] .sc-lbl { color: #fff; }
+
+.sc-btn.sel[data-val="3"] { background: #2563eb; border-color: #2563eb; box-shadow: 0 3px 12px rgba(37,99,235,.4); transform: translateY(-2px); }
+.sc-btn.sel[data-val="3"] .sc-num,
+.sc-btn.sel[data-val="3"] .sc-lbl { color: #fff; }
+
+.sc-btn.sel[data-val="4"] { background: #16a34a; border-color: #16a34a; box-shadow: 0 3px 12px rgba(22,163,74,.4); transform: translateY(-2px); }
+.sc-btn.sel[data-val="4"] .sc-num,
+.sc-btn.sel[data-val="4"] .sc-lbl { color: #fff; }
+
+/* ── Rubric toggle ── */
+.rubric-toggle {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 14px 11px;
+  background: none; border: none;
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  color: var(--fg-muted); cursor: pointer;
+  text-transform: uppercase; letter-spacing: .5px;
+  border-top: 1px dashed var(--border);
+  width: 100%;
+}
+.rubric-toggle:hover { color: var(--fg); }
+.rubric-arrow { transition: transform .2s; font-style: normal; }
+.rubric-toggle.open .rubric-arrow { transform: rotate(180deg); }
+
+.rubric-body {
+  display: none;
+  padding: 2px 12px 14px;
+}
+.rubric-body.open { display: block; }
+.rubric-row {
+  display: flex; gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-xs);
+  margin-bottom: 5px;
+  align-items: flex-start;
+}
+.rubric-row:last-child { margin-bottom: 0; }
+.rubric-row.r1 { background: #fff1f1; }
+.rubric-row.r2 { background: #fffbeb; }
+.rubric-row.r3 { background: #eff6ff; }
+.rubric-row.r4 { background: #f0fdf4; }
+.rubric-n {
+  width: 22px; height: 22px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 900;
+  flex-shrink: 0; margin-top: 1px;
+  color: #fff;
+}
+.r1 .rubric-n { background: #dc2626; }
+.r2 .rubric-n { background: #d97706; }
+.r3 .rubric-n { background: #2563eb; }
+.r4 .rubric-n { background: #16a34a; }
+.rubric-text { font-size: 12px; line-height: 1.55; color: #111827; }
+
+/* ── Progress bar ── */
+.score-bar {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-top: 16px;
+  box-shadow: 0 2px 12px rgba(30,45,107,.06);
+}
+.score-bar-top {
+  display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 10px;
+}
+.score-bar-label { font-size: 11px; font-weight: 800; color: var(--fg-muted); text-transform: uppercase; letter-spacing: .6px; }
+.score-nums { text-align: right; }
+.score-pts { font-size: 32px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; color: var(--plan); }
+.score-max { font-size: 14px; font-weight: 500; color: var(--fg-muted); }
+.score-pct { font-size: 12px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+.progress-track { height: 10px; background: var(--border); border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 6px; transition: width .35s ease, background .35s; }
+.score-done-count { font-size: 11px; color: var(--fg-subtle); margin-top: 7px; }
+
+.submit-btn {
+  width: 100%; padding: 17px; margin-top: 14px;
+  background: var(--header-bg); color: #eef2ff;
+  border: none; border-radius: var(--radius-sm);
+  font-family: inherit; font-size: 16px; font-weight: 800;
+  cursor: pointer; transition: all .15s; letter-spacing: .2px;
+  box-shadow: 0 4px 14px rgba(30,45,107,.25);
+}
+.submit-btn:disabled { opacity: .3; cursor: not-allowed; box-shadow: none; }
+.submit-btn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(30,45,107,.3); }
+.submit-btn.saved { background: #16a34a; box-shadow: 0 4px 14px rgba(22,163,74,.3); }
+
+/* ── Results ── */
+.section-title { font-size: 10px; font-weight: 800; color: var(--fg-subtle); text-transform: uppercase; letter-spacing: .8px; margin: 22px 0 9px; }
+.card { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+
+.rank-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.rank-row:last-child { border-bottom: none; }
+.rank-badge { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900; flex-shrink: 0; background: var(--surface2); color: var(--fg-muted); }
+.rank-1 .rank-badge { background: linear-gradient(135deg,#fbbf24,#f59e0b); color: #fff; }
+.rank-2 .rank-badge { background: linear-gradient(135deg,#94a3b8,#64748b); color: #fff; }
+.rank-3 .rank-badge { background: linear-gradient(135deg,#c87941,#a16207); color: #fff; }
+.rank-body { flex: 1; min-width: 0; }
+.rank-name { font-size: 15px; font-weight: 800; }
+.rank-eval-names { font-size: 11px; color: var(--fg-subtle); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank-bar-track { height: 5px; background: var(--border); border-radius: 3px; margin-top: 6px; }
+.rank-bar-fill { height: 100%; border-radius: 3px; }
+.rank-right { text-align: right; flex-shrink: 0; }
+.rank-score-num { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.rank-score-pct { font-size: 12px; color: var(--fg-muted); }
+
+.band-chip { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+.breakdown-card { padding: 14px 16px; }
+.bd-row { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.bd-row:last-child { margin-bottom: 0; }
+.bd-label { font-size: 11px; font-weight: 600; width: 88px; flex-shrink: 0; color: var(--fg-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bd-track { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.bd-bar { height: 13px; border-radius: 4px; min-width: 4px; transition: width .5s ease; }
+.bd-val { font-size: 10px; color: var(--fg-subtle); flex-shrink: 0; width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+
+.detail-table { width: 100%; border-collapse: collapse; font-size: 11px; font-variant-numeric: tabular-nums; }
+.detail-table th { padding: 9px 7px; text-align: center; font-weight: 700; font-size: 10px; letter-spacing: .3px; background: var(--surface2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+.detail-table th:first-child { text-align: left; padding-left: 14px; }
+.detail-table td { padding: 9px 7px; text-align: center; border-bottom: 1px solid var(--border); }
+.detail-table td:first-child { text-align: left; font-weight: 700; padding-left: 14px; font-size: 12px; }
+.detail-table tr:last-child td { border-bottom: none; }
+.score-chip { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; font-size: 11px; font-weight: 900; color: #fff; }
+
+.ev-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 4px; }
+.ev-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: var(--surface); border: 1.5px solid var(--border); border-radius: 20px; font-size: 12px; font-weight: 600; }
+.ev-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--plan); }
+
+.empty-state { text-align: center; padding: 52px 24px; color: var(--fg-muted); }
+.empty-icon { font-size: 44px; margin-bottom: 14px; }
+.empty-title { font-size: 16px; font-weight: 800; color: var(--fg); margin-bottom: 7px; }
+.empty-text { font-size: 13px; line-height: 1.65; }
+
+.loader { text-align: center; padding: 44px 0; color: var(--fg-muted); font-size: 13px; }
+.spinner { width: 30px; height: 30px; border: 3px solid var(--border); border-top-color: var(--plan); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.toast { position: fixed; bottom: max(22px, env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); background: #1e2d6b; color: #eef2ff; padding: 11px 20px; border-radius: 24px; font-size: 13px; font-weight: 700; z-index: 50; opacity: 0; transition: opacity .25s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(30,45,107,.3); }
+.toast.show { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-fill, .bd-bar, .rank-bar-fill { transition: none; }
+  .sc-btn:hover, .submit-btn:not(:disabled):hover { transform: none; }
+}
+.app-footer{text-align:center;font-size:11px;color:var(--fg-subtle);padding:6px 0 28px}
+.mode-banner{background:var(--s2-bg);color:var(--s2-fg);border:1px solid var(--s2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;margin-top:14px}
+</style>
+<script src="config.js"></script>
+
+</head>
+<body>
+<!-- ── App ── -->
+<div class="app-header">
+  <div class="header-logo">
+    <div class="logo-dot">📋</div>
+    <div>
+      <div class="header-title">Círculos de Calidad RDP</div>
+      <div class="header-sub">Escorial · Sistema de Evaluación</div>
+    </div>
+  </div>
+  <div class="header-badge" id="evalCount" hidden>0 evals</div>
+</div>
+
+<div class="tabs">
+  <button class="tab-btn active" id="tabEval" onclick="switchTab('eval')">✏️ Evaluar</button>
+  <button class="tab-btn" id="tabRes" onclick="switchTab('res')">📊 Resultados</button>
+</div>
+
+<div class="tab-pane active" id="paneEval">
+  <div class="field">
+    <label class="label" for="evName">Tu nombre (evaluador)</label>
+    <input id="evName" class="text-input" type="text" placeholder="Ej: Carlos García" autocomplete="off" spellcheck="false">
+  </div>
+  <div class="field">
+    <label class="label" for="circleInput">Círculo / RDP a evaluar</label>
+    <input id="circleInput" class="text-input" type="text" placeholder="Ej: UET2 — Quemadores" autocomplete="off" spellcheck="false">
+  </div>
+
+  <div id="criteriaWrap" hidden>
+    <div id="critCards"></div>
+
+    <div class="score-bar">
+      <div class="score-bar-top">
+        <div>
+          <div class="score-bar-label">Puntaje acumulado</div>
+          <div class="score-done-count" id="doneCount">0 / 10 criterios puntuados</div>
+        </div>
+        <div class="score-nums">
+          <span class="score-pts" id="scorePts">0</span>
+          <span class="score-max"> / 100</span>
+          <div class="score-pct" id="scorePct">0%</div>
+        </div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" disabled onclick="submitEval()">
+      Guardar evaluación
+    </button>
+  </div>
+</div>
+
+<div class="tab-pane" id="paneRes">
+  <div id="resContent">
+    <div class="loader"><div class="spinner"></div>Conectando…</div>
+  </div>
+</div>
+
+<footer class="app-footer">Desarrollado por Mgter. Diego Ortiz — Líder de Mejora Continua | Consultor ISO</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+const PDCA_C = {PLAN:'#2563eb',DO:'#ea580c',CHECK:'#16a34a',ACT:'#7c3aed',PRES:'#be123c'};
+const PDCA_BG = {PLAN:'#dbeafe',DO:'#ffedd5',CHECK:'#dcfce7',ACT:'#ede9fe',PRES:'#ffe4e6'};
+const PDCA_NAMES = {PLAN:'Plan',DO:'Do',CHECK:'Check',ACT:'Act',PRES:'Presentación'};
+const SC_C = {1:'#dc2626',2:'#d97706',3:'#2563eb',4:'#16a34a'};
+const SCORE_LBL = {1:'Insuficiente',2:'Básico',3:'Sólido',4:'Excepcional'};
+const MAX = 100;
+
+const CRITERIA = [
+  {
+    id:'c1', paso:1, pdca:'PLAN',
+    name:'Clarificación del Problema', w:10, f:2.5,
+    focus:'Precisión, datos y vinculación estratégica.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Definición precisa con 5W+2H sustentada en datos reales. Brecha cuantificada y verificable. Evidencia de Genba. Impacto ligado a KPIs del área.',
+      3:'<strong>Sólido:</strong> Problema bien definido con datos y brecha visible. Vinculado a objetivos del área. Puede faltar evidencia explícita de Genba.',
+      2:'<strong>Básico:</strong> Problema identificado pero descripción genérica. Falta cuantificación de brecha o vinculación a objetivos.',
+      1:'<strong>Insuficiente:</strong> Problema vago o confundido con síntomas. Sin datos. No se puede determinar gravedad ni origen.'
+    }
+  },
+  {
+    id:'c2', paso:2, pdca:'PLAN',
+    name:'Desglose del Problema', w:5, f:1.25,
+    focus:'Estratificación y foco en el punto de causa.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Estratificación profunda y visual. Análisis multivariable que aísla el punto de causa con evidencia cuantitativa.',
+      3:'<strong>Sólido:</strong> Estratificación clara y ordenada que lleva lógicamente al punto de causa foco.',
+      2:'<strong>Básico:</strong> Estratificación parcial. Hay intento de foco pero sin datos suficientes que lo sustenten.',
+      1:'<strong>Insuficiente:</strong> Sin estratificación real. El problema se trata de forma global sin identificar dónde actuar.'
+    }
+  },
+  {
+    id:'c3', paso:3, pdca:'PLAN',
+    name:'Objetivo SMART', w:5, f:1.25,
+    focus:'Claridad, medición y ambición del objetivo.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Objetivo SMART completo con baseline sólido, meta ambiciosa y criterio de logro explícito. Refleja el nivel de mejora esperado.',
+      3:'<strong>Sólido:</strong> Objetivo SMART con baseline, meta y plazo definidos. Coherente con el desglose previo.',
+      2:'<strong>Básico:</strong> Tiene algunas características SMART. Falta baseline claro, plazo o la meta es poco ambiciosa.',
+      1:'<strong>Insuficiente:</strong> Objetivo vago, no medible o sin referencia al punto de causa identificado.'
+    }
+  },
+  {
+    id:'c4', paso:4, pdca:'PLAN',
+    name:'Análisis de Causa Raíz', w:20, f:5,
+    focus:'Profundidad del análisis y verificación de causas.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Análisis profundo con método correcto (5Por qué / Ishikawa). Causas verificadas con datos. Jerarquía causal bien fundamentada y priorizada.',
+      3:'<strong>Sólido:</strong> Método aplicado correctamente. Causas identificadas y priorizadas con evidencia. Se distingue causa raíz de causas secundarias.',
+      2:'<strong>Básico:</strong> Análisis parcial o método aplicado de forma superficial. Causas no del todo verificadas con datos.',
+      1:'<strong>Insuficiente:</strong> Sin análisis de causa raíz o análisis superficial. Las causas listadas son síntomas, no causas reales.'
+    }
+  },
+  {
+    id:'c5', paso:5, pdca:'PLAN',
+    name:'Contramedidas', w:15, f:3.75,
+    focus:'Especificidad, relación con causas raíz y plan de acción.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Contramedidas robustas que atacan causas raíz. Priorizadas con criterio (impacto/factibilidad), con responsable, plazo y criterio de verificación.',
+      3:'<strong>Sólido:</strong> Contramedidas específicas por causa, priorizadas y con responsable y plazo asignado.',
+      2:'<strong>Básico:</strong> Abordan algunas causas pero sin priorización clara ni plan de ejecución detallado.',
+      1:'<strong>Insuficiente:</strong> Contramedidas genéricas o sin relación directa con las causas identificadas en el paso anterior.'
+    }
+  },
+  {
+    id:'c6', paso:6, pdca:'DO',
+    name:'Implementación', w:20, f:5,
+    focus:'Evidencia de ejecución, seguimiento y gestión del equipo.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Implementación completa documentada con gestión visual clara. Ajustes registrados durante la ejecución. Involucramiento real del equipo visible.',
+      3:'<strong>Sólido:</strong> Implementación documentada con registro de avance y evidencias visuales (fotos, gráficos de avance).',
+      2:'<strong>Básico:</strong> Implementación iniciada pero incompleta o con seguimiento muy limitado.',
+      1:'<strong>Insuficiente:</strong> Sin evidencia de implementación real o ejecución puramente teórica.'
+    }
+  },
+  {
+    id:'c7', paso:7, pdca:'CHECK',
+    name:'Resultados', w:10, f:2.5,
+    focus:'Cuantificación del impacto y comparación con el objetivo.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Resultados claros con análisis de tendencia, comparación con baseline y objetivo, y cuantificación del impacto total (calidad, costo, productividad).',
+      3:'<strong>Sólido:</strong> Resultados cuantitativos que muestran mejora respecto al baseline y avance hacia el objetivo.',
+      2:'<strong>Básico:</strong> Resultados parciales o presentados sin comparación sistemática con el baseline.',
+      1:'<strong>Insuficiente:</strong> Sin datos de resultado o resultados no comparables con el objetivo planteado.'
+    }
+  },
+  {
+    id:'c8', paso:8, pdca:'ACT',
+    name:'Estandarización', w:5, f:1.25,
+    focus:'Consolidación de la mejora y control sostenido.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Estándar implementado, equipo capacitado en el nuevo estándar y mecanismo de control definido (auditoría, indicador de seguimiento).',
+      3:'<strong>Sólido:</strong> Estándar creado o actualizado y comunicado al sector afectado.',
+      2:'<strong>Básico:</strong> Intención de estandarizar documentada pero sin implementación formal ni despliegue visible.',
+      1:'<strong>Insuficiente:</strong> Sin evidencia de estandarización. La mejora queda sin proteger ante recurrencias.'
+    }
+  },
+  {
+    id:'c9a', paso:null, pdca:'PRES',
+    name:'Presentación', w:5, f:1.25,
+    focus:'Claridad narrativa y estructura de la exposición.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Narrativa impecable, ordenada y fluida. Uso efectivo de recursos visuales. El equipo domina el material y responde con precisión.',
+      3:'<strong>Sólido:</strong> Presentación clara y ordenada. El equipo comunica bien los pasos y los resultados.',
+      2:'<strong>Básico:</strong> Sigue el formato pero la exposición es poco fluida o depende de lectura directa de las diapositivas.',
+      1:'<strong>Insuficiente:</strong> Presentación desorganizada o muy difícil de seguir. Falta de apropiación del material.'
+    }
+  },
+  {
+    id:'c9b', paso:null, pdca:'PRES',
+    name:'Reflexión del Equipo', w:5, f:1.25,
+    focus:'Profundidad y apropiación real de los aprendizajes.',
+    rubric:{
+      4:'<strong>Excepcional:</strong> Reflexión profunda y genuina. El equipo identifica aprendizajes concretos, reconoce errores del proceso y propone próximos pasos.',
+      3:'<strong>Sólido:</strong> Reflexión genuina sobre los aprendizajes más importantes. El equipo muestra apropiación real del proceso vivido.',
+      2:'<strong>Básico:</strong> Reflexión superficial o muy dirigida. Falta profundidad en los aprendizajes identificados.',
+      1:'<strong>Insuficiente:</strong> Sin reflexión real. El equipo no demuestra aprendizaje del proceso RDP.'
+    }
+  },
+];
+
+const PDCA_ORDER = ['PLAN','DO','CHECK','ACT','PRES'];
+
+let state = {name:'', circle:'', scores:{}};
+let allEvals = [];
+let db = null;
+
+(async () => {
+  try {
+    const n = localStorage.getItem('rdp_ev_name');
+    if (n) { state.name = n; document.getElementById('evName').value = n; }
+  } catch(e){}
+
+  buildCritCards();
+
+  document.getElementById('evName').addEventListener('input', e => {
+    state.name = e.target.value.trim();
+    try { localStorage.setItem('rdp_ev_name', state.name); } catch(e){}
+    updateSubmit();
+  });
+
+  document.getElementById('circleInput').addEventListener('input', e => {
+    const val = e.target.value.trim();
+    if (val !== state.circle) {
+      state.circle = val;
+      state.scores = {};
+      document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('sel'));
+      document.querySelectorAll('.crit-card').forEach(c => c.classList.remove('done'));
+      updateTotal();
+      if (val.length >= 2) {
+        document.getElementById('criteriaWrap').hidden = false;
+        loadExisting();
+      } else {
+        document.getElementById('criteriaWrap').hidden = true;
+      }
+    }
+    updateSubmit();
+  });
+
+  db = createStore();
+  if (db.mode === 'local') {
+    const b = document.createElement('div');
+    b.className = 'mode-banner';
+    b.textContent = 'Modo local: las evaluaciones se guardan solo en este dispositivo. Configurá API_URL en config.js para compartirlas entre evaluadores.';
+    document.getElementById('resContent').before(b);
+  }
+  db.subscribe(docs => {
+    allEvals = docs;
+    const n = allEvals.length;
+    const badge = document.getElementById('evalCount');
+    badge.textContent = n + (n === 1 ? ' eval' : ' evals');
+    badge.hidden = n === 0;
+    renderResults();
+    if (state.circle.length >= 2 && !Object.keys(state.scores).length) loadExisting();
+  }, err => {
+    document.getElementById('resContent').innerHTML =
+      '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">Sin conexión</div><div class="empty-text">No se pudo conectar con el servidor.<br>Recargá la página.</div></div>';
+  });
+})();
+
+
+// ── Capa de almacenamiento: API (Cloudflare Worker + Neon) o localStorage ──
+function createStore() {
+  const API = (window.APP_CONFIG && window.APP_CONFIG.API_URL || '').replace(/\/$/, '');
+  const POLL_MS = (window.APP_CONFIG && window.APP_CONFIG.POLL_MS) || 15000;
+  if (API) {
+    return {
+      mode: 'api',
+      async save(key, doc) {
+        const r = await fetch(API + '/evals/' + encodeURIComponent(key), {
+          method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(doc)
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        this._load && this._load();
+      },
+      subscribe(cb, onErr) {
+        const load = async () => {
+          try {
+            const r = await fetch(API + '/evals');
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            cb(await r.json());
+          } catch (e) { onErr(e); }
+        };
+        this._load = load; load(); setInterval(load, POLL_MS);
+      }
+    };
+  }
+  const K = 'rdp_evals_v1';
+  const read = () => { try { return JSON.parse(localStorage.getItem(K) || '{}'); } catch (e) { return {}; } };
+  return {
+    mode: 'local',
+    async save(key, doc) {
+      const all = read(); all[key] = doc;
+      try { localStorage.setItem(K, JSON.stringify(all)); } catch (e) { throw new Error('almacenamiento no disponible'); }
+      this._cb && this._cb(Object.entries(all).map(([_id, d]) => ({_id, ...d})));
+    },
+    subscribe(cb) {
+      this._cb = cb;
+      cb(Object.entries(read()).map(([_id, d]) => ({_id, ...d})));
+    }
+  };
+}
+
+function loadExisting() {
+  if (!state.name || !state.circle) return;
+  const match = allEvals.find(e =>
+    e.circle?.toLowerCase() === state.circle.toLowerCase() &&
+    e.evaluador?.toLowerCase() === state.name.toLowerCase()
+  );
+  if (!match) return;
+  state.scores = {...(match.scores || {})};
+  CRITERIA.forEach(c => {
+    const v = state.scores[c.id];
+    if (v) applySCUI(c.id, v);
+  });
+  updateTotal();
+  toast('↩ Cargada evaluación anterior de ' + state.circle);
+}
+
+function buildCritCards() {
+  const wrap = document.getElementById('critCards');
+
+  // Group by PDCA
+  const groups = {};
+  CRITERIA.forEach(c => {
+    if (!groups[c.pdca]) groups[c.pdca] = [];
+    groups[c.pdca].push(c);
+  });
+
+  PDCA_ORDER.forEach(pdca => {
+    if (!groups[pdca]) return;
+    const crits = groups[pdca];
+
+    // Section header
+    const sec = document.createElement('div');
+    sec.className = 'pdca-section';
+    sec.innerHTML = `
+      <div class="pdca-badge" style="background:${PDCA_C[pdca]}">${pdca}</div>
+      <div class="pdca-line"></div>
+      <div class="pdca-label">${PDCA_NAMES[pdca]}</div>`;
+    wrap.appendChild(sec);
+
+    crits.forEach(c => {
+      const card = document.createElement('div');
+      card.className = 'crit-card';
+      card.id = 'cc_' + c.id;
+
+      const paso = c.paso ? `P${c.paso}` : '★';
+      const rubricRows = [4,3,2,1].map(v => `
+        <div class="rubric-row r${v}">
+          <div class="rubric-n">${v}</div>
+          <div class="rubric-text">${c.rubric[v].replace(/<strong>[^<]*<\/strong>\s*/g,'')}</div>
+        </div>`).join('');
+
+      card.innerHTML = `
+        <div class="crit-head" style="border-left-color:${PDCA_C[c.pdca]}">
+          <div class="paso-num" style="background:${PDCA_BG[c.pdca]};color:${PDCA_C[c.pdca]}">${paso}</div>
+          <div class="crit-info">
+            <div class="crit-name">${c.name}</div>
+            <div class="crit-focus">${c.focus}</div>
+          </div>
+          <div class="crit-pts" id="pts_${c.id}">${c.w} pts</div>
+        </div>
+        <div class="score-row">
+          ${[1,2,3,4].map(v => `
+            <button class="sc-btn" data-cid="${c.id}" data-val="${v}" onclick="setScore('${c.id}',${v})">
+              <span class="sc-num">${v}</span>
+              <span class="sc-lbl">${SCORE_LBL[v]}</span>
+            </button>`).join('')}
+        </div>
+        <div class="rubric-body open" id="rbody_${c.id}">${rubricRows}</div>`;
+      wrap.appendChild(card);
+    });
+  });
+}
+
+function toggleRubric(cid) {
+  const tog = document.getElementById('rtog_' + cid);
+  const body = document.getElementById('rbody_' + cid);
+  tog.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+function setScore(cid, val) {
+  state.scores[cid] = val;
+  applySCUI(cid, val);
+  document.getElementById('cc_' + cid).classList.add('done');
+  // update pts badge
+  const c = CRITERIA.find(x => x.id === cid);
+  const pts = document.getElementById('pts_' + cid);
+  if (pts) { pts.className = 'crit-pts scored'; pts.textContent = (val * c.f).toFixed(1) + ' / ' + c.w + ' pts'; }
+  updateTotal();
+  const btn = document.getElementById('submitBtn');
+  if (btn.classList.contains('saved')) { btn.classList.remove('saved'); btn.textContent = 'Guardar evaluación'; }
+}
+
+function applySCUI(cid, val) {
+  document.querySelectorAll(`.sc-btn[data-cid="${cid}"]`).forEach(b => {
+    b.classList.toggle('sel', parseInt(b.dataset.val) === val);
+  });
+}
+
+function calcTotal() {
+  return CRITERIA.reduce((s, c) => s + (state.scores[c.id] || 0) * c.f, 0);
+}
+
+function updateTotal() {
+  const tot = calcTotal();
+  const pct = tot / MAX * 100;
+  const done = CRITERIA.filter(c => state.scores[c.id]).length;
+  document.getElementById('scorePts').textContent = tot.toFixed(1);
+  document.getElementById('scorePct').textContent = pct.toFixed(0) + '%';
+  document.getElementById('doneCount').textContent = done + ' / 10 criterios puntuados';
+  const fill = document.getElementById('progFill');
+  fill.style.width = pct + '%';
+  fill.style.background = pct >= 75 ? '#16a34a' : pct >= 55 ? '#2563eb' : pct >= 35 ? '#d97706' : '#dc2626';
+  document.getElementById('scorePts').style.color = pct >= 75 ? '#16a34a' : pct >= 55 ? '#2563eb' : pct >= 35 ? '#d97706' : '#dc2626';
+  updateSubmit();
+}
+
+function updateSubmit() {
+  const all = CRITERIA.every(c => state.scores[c.id]);
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = !(all && state.name && state.circle && state.circle.length >= 2);
+}
+
+async function submitEval() {
+  if (!db) { toast('Sin conexión'); return; }
+  const total = calcTotal();
+  const key = state.name.trim().toLowerCase().replace(/[^a-z0-9]+/g,'_')
+            + '__' + state.circle.trim().toLowerCase().replace(/[^a-z0-9]+/g,'_');
+  const doc = {
+    evaluador: state.name.trim(),
+    circle: state.circle.trim(),
+    scores: {...state.scores},
+    total: parseFloat(total.toFixed(2)),
+    pct: Math.round(total / MAX * 100),
+    ts: Date.now(),
+  };
+  try {
+    await db.save(key, doc);
+    const btn = document.getElementById('submitBtn');
+    btn.textContent = '✓ Evaluación guardada';
+    btn.classList.add('saved');
+    toast('✅ Evaluación de ' + state.circle + ' guardada');
+  } catch(e) {
+    toast('Error: ' + e.message);
+  }
+}
+
+function bandColor(pct) {
+  return pct >= 75 ? '#16a34a' : pct >= 55 ? '#2563eb' : pct >= 35 ? '#d97706' : '#dc2626';
+}
+
+function renderResults() {
+  const wrap = document.getElementById('resContent');
+  if (!allEvals.length) {
+    wrap.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">Sin evaluaciones aún</div>
+      <div class="empty-text">Completá la primera evaluación<br>desde la pestaña Evaluar.</div>
+    </div>`;
+    return;
+  }
+
+  const byCircle = {};
+  allEvals.forEach(e => {
+    const k = e.circle || '?';
+    if (!byCircle[k]) byCircle[k] = [];
+    byCircle[k].push(e);
+  });
+
+  const stats = Object.entries(byCircle).map(([circle, evs]) => {
+    const avg = evs.reduce((s,e) => s + (e.total||0), 0) / evs.length;
+    const pct = avg / MAX * 100;
+    const avgScores = {};
+    CRITERIA.forEach(c => {
+      avgScores[c.id] = evs.reduce((s,e) => s + (e.scores?.[c.id]||0), 0) / evs.length;
+    });
+    return {circle, evs, avg, pct, avgScores};
+  }).sort((a,b) => b.avg - a.avg);
+
+  const evNames = [...new Set(allEvals.map(e => e.evaluador).filter(Boolean))];
+
+  const bandLabel = p => p >= 75 ? 'Excelente' : p >= 55 ? 'Bueno' : p >= 35 ? 'En desarrollo' : 'Insuficiente';
+
+  let html = '';
+
+  html += `<div class="section-title">Evaluadores activos</div>
+  <div class="ev-chips">${evNames.map(n=>`<span class="ev-chip"><span class="ev-dot"></span>${n}</span>`).join('')}</div>`;
+
+  html += `<div class="section-title">Ranking General</div><div class="card">`;
+  stats.forEach((s, i) => {
+    const col = bandColor(s.pct);
+    html += `<div class="rank-row rank-${i+1}">
+      <div class="rank-badge">${i+1}</div>
+      <div class="rank-body">
+        <div class="rank-name">${s.circle}</div>
+        <div class="rank-eval-names">${s.evs.map(e=>e.evaluador).join(' · ')} · ${s.evs.length} eval${s.evs.length>1?'s':''}</div>
+        <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${s.pct.toFixed(1)}%;background:${col}"></div></div>
+      </div>
+      <div class="rank-right">
+        <div class="rank-score-num" style="color:${col}">${s.avg.toFixed(1)}</div>
+        <div class="rank-score-pct">${s.pct.toFixed(0)}% · ${bandLabel(s.pct)}</div>
+      </div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="section-title">Detalle por criterio</div><div class="card breakdown-card">`;
+  CRITERIA.forEach(c => {
+    html += `<div class="bd-row">
+      <div class="bd-label" style="color:${PDCA_C[c.pdca]}" title="${c.name}">${c.paso?'P'+c.paso+' ':''}${c.name.split(' ').slice(0,2).join(' ')}</div>
+      <div class="bd-track">`;
+    stats.forEach(s => {
+      const a = s.avgScores[c.id] || 0;
+      html += `<div class="bd-bar" style="width:${(a/4*100).toFixed(1)}%;background:${bandColor(a/4*100)}" title="${s.circle}: ${a.toFixed(2)}/4"></div>`;
+    });
+    html += `</div>
+      <div class="bd-val">${stats[0] ? (stats[0].avgScores[c.id]||0).toFixed(1)+'/4' : ''}</div>
+    </div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="section-title">Todas las evaluaciones</div>
+  <div class="card" style="overflow-x:auto">
+  <table class="detail-table">
+    <thead><tr>
+      <th>Círculo</th><th>Evaluador</th>
+      ${CRITERIA.map(c=>`<th style="color:${PDCA_C[c.pdca]}" title="${c.name}">${c.paso?'P'+c.paso:'PR'}</th>`).join('')}
+      <th>Total</th><th>%</th>
+    </tr></thead>
+    <tbody>
+    ${[...allEvals].sort((a,b)=>(b.total||0)-(a.total||0)).map(e => {
+      const pct = (e.total||0)/MAX*100;
+      const col = bandColor(pct);
+      return `<tr>
+        <td>${e.circle||'—'}</td>
+        <td style="color:var(--fg-muted);font-size:11px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.evaluador||'—'}</td>
+        ${CRITERIA.map(c => {
+          const v = e.scores?.[c.id];
+          return `<td>${v!=null?`<span class="score-chip" style="background:${SC_C[v]}">${v}</span>`:'—'}</td>`;
+        }).join('')}
+        <td><b style="color:${col}">${(e.total||0).toFixed(1)}</b></td>
+        <td style="color:${col};font-weight:700">${pct.toFixed(0)}%</td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table></div>`;
+
+  wrap.innerHTML = html;
+}
+
+function switchTab(tab) {
+  document.getElementById('paneEval').classList.toggle('active', tab==='eval');
+  document.getElementById('paneRes').classList.toggle('active', tab==='res');
+  document.getElementById('tabEval').classList.toggle('active', tab==='eval');
+  document.getElementById('tabRes').classList.toggle('active', tab==='res');
+}
+
+let _toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+</script>
+
+</body></html>
