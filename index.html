@@ -135,7 +135,7 @@ body::before {
   position: sticky;
   top: calc(env(safe-area-inset-top, 0px) + 50px);
   z-index: 9;
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
   background: var(--surface);
   border-bottom: 2px solid var(--border);
   box-shadow: 0 2px 12px rgba(30,45,107,.07);
@@ -431,7 +431,7 @@ body::before {
   .progress-fill, .bd-bar, .rank-bar-fill { transition: none; }
   .sc-btn:hover, .submit-btn:not(:disabled):hover { transform: none; }
 }
-.app-footer{text-align:center;font-size:11px;color:var(--fg-subtle);padding:6px 0 28px}
+.adm-hint{font-size:12px;color:var(--fg-muted);margin:4px 0 14px}.adm-row{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--border)}.adm-row:last-child{border-bottom:none}.adm-row .rank-body{flex:1}.del-btn{border:1.5px solid var(--border);background:var(--surface);color:#dc2626;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer;font-family:inherit}.btn2{width:100%;padding:13px;margin-top:6px;background:var(--plan);color:#fff;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:14px;font-weight:800;cursor:pointer}.app-footer{text-align:center;font-size:11px;color:var(--fg-subtle);padding:6px 0 28px}
 .mode-banner{background:var(--s2-bg);color:var(--s2-fg);border:1px solid var(--s2);border-radius:var(--radius-sm);padding:9px 12px;font-size:12px;margin-top:14px}
 </style>
 <script src="config.js"></script>
@@ -454,6 +454,7 @@ body::before {
 <div class="tabs">
   <button class="tab-btn active" id="tabEval" onclick="switchTab('eval')">✏️ Evaluar</button>
   <button class="tab-btn" id="tabRes" onclick="switchTab('res')">📊 Resultados</button>
+  <button class="tab-btn" id="tabAdm" onclick="switchTab('adm')">⚙️ RDP</button>
 </div>
 
 <div class="tab-pane active" id="paneEval">
@@ -493,6 +494,27 @@ body::before {
 <div class="tab-pane" id="paneRes">
   <div id="resContent">
     <div class="loader"><div class="spinner"></div>Conectando…</div>
+  </div>
+</div>
+
+<div class="tab-pane" id="paneAdm">
+  <div id="admLock">
+    <div class="field">
+      <label class="label" for="admKey">Clave de administración</label>
+      <input id="admKey" class="text-input" type="password" placeholder="Clave de quienes cargan los RDP" autocomplete="off">
+    </div>
+    <button class="btn2" onclick="admUnlock()">Ingresar</button>
+    <div class="adm-hint">Solo quienes administran la lista de RDP necesitan esta clave. Para evaluar no hace falta.</div>
+  </div>
+  <div id="admPanel" hidden>
+    <div class="field"><label class="label" for="admNombre">Nombre del RDP</label>
+      <input id="admNombre" class="text-input" type="text" placeholder="Ej: RDP 3 — Rebordeado de camisa" autocomplete="off"></div>
+    <div class="field"><label class="label" for="admArea">Área / UET (opcional)</label>
+      <input id="admArea" class="text-input" type="text" placeholder="Ej: UET 4" autocomplete="off"></div>
+    <button class="btn2" onclick="admAdd()">Agregar a la lista</button>
+    <div class="section-title">RDP cargados</div>
+    <div class="card" id="admList"></div>
+    <button class="del-btn" style="margin-top:14px" onclick="admLock()">Cerrar sesión de administración</button>
   </div>
 </div>
 
@@ -641,32 +663,7 @@ let db = null;
     updateSubmit();
   });
 
-  const CATALOG = (window.RDP_CATALOG || []).filter(r => r && r.nombre);
-  if (CATALOG.length) {
-    const old = document.getElementById('circleInput');
-    const sel = document.createElement('select');
-    sel.id = 'circleInput'; sel.className = 'text-input';
-    old.replaceWith(sel);
-    refreshCircleOptions();
-  }
-
-  document.getElementById('circleInput').addEventListener('input', e => {
-    const val = e.target.value.trim();
-    if (val !== state.circle) {
-      state.circle = val;
-      state.scores = {};
-      document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('sel'));
-      document.querySelectorAll('.crit-card').forEach(c => c.classList.remove('done'));
-      updateTotal();
-      if (val.length >= 2) {
-        document.getElementById('criteriaWrap').hidden = false;
-        loadExisting();
-      } else {
-        document.getElementById('criteriaWrap').hidden = true;
-      }
-    }
-    updateSubmit();
-  });
+  document.getElementById('circleInput').addEventListener('input', onCircleInput);
 
   db = createStore();
   if (db.mode === 'local') {
@@ -675,6 +672,9 @@ let db = null;
     b.textContent = 'Modo local: las evaluaciones se guardan solo en este dispositivo. Configurá API_URL en config.js para compartirlas entre evaluadores.';
     document.getElementById('resContent').before(b);
   }
+  try { const k = sessionStorage.getItem('rdp_adm'); if (k && db.mode === 'api') db.checkAdmin(k).then(() => { adminKey = k; showAdmin(true); }).catch(() => {}); } catch(e){}
+  db.subscribeCatalog(applyCatalog);
+  if (db.mode === 'local') { document.getElementById('admLock').hidden = true; document.getElementById('admPanel').hidden = false; }
   db.subscribe(docs => {
     allEvals = docs;
     const n = allEvals.length;
@@ -696,6 +696,15 @@ function createStore() {
   const API = (window.APP_CONFIG && window.APP_CONFIG.API_URL || '').replace(/\/$/, '');
   const POLL_MS = (window.APP_CONFIG && window.APP_CONFIG.POLL_MS) || 15000;
   if (API) {
+    const adminFetch = async (path, method, key, body) => {
+      const r = await fetch(API + path, {
+        method, headers: {'Content-Type': 'application/json', 'X-Admin-Key': key}, body: body ? JSON.stringify(body) : undefined
+      });
+      if (r.status === 401) throw new Error('Clave incorrecta');
+      if (r.status === 503) throw new Error('Falta configurar ADMIN_KEY en el Worker');
+      if (!r.ok) throw new Error('Error ' + r.status);
+      return r.json();
+    };
     return {
       mode: 'api',
       async save(key, doc) {
@@ -712,13 +721,27 @@ function createStore() {
             if (!r.ok) throw new Error('HTTP ' + r.status);
             cb(await r.json());
           } catch (e) { onErr(e); }
+          this._loadCat && this._loadCat();
         };
         this._load = load; load(); setInterval(load, POLL_MS);
-      }
+      },
+      subscribeCatalog(cb) {
+        this._loadCat = async () => {
+          try { const r = await fetch(API + '/circles'); if (r.ok) cb(await r.json()); } catch (e) {}
+        };
+      },
+      checkAdmin(key) { return adminFetch('/admin/check', 'GET', key); },
+      async addCircle(c, key) { await adminFetch('/circles/' + encodeURIComponent(c.id), 'PUT', key, {nombre: c.nombre, area: c.area}); this._loadCat(); },
+      async removeCircle(id, key) { await adminFetch('/circles/' + encodeURIComponent(id), 'DELETE', key); this._loadCat(); }
     };
   }
-  const K = 'rdp_evals_v1';
+  const K = 'rdp_evals_v1', KC = 'rdp_catalog_v1';
   const read = () => { try { return JSON.parse(localStorage.getItem(K) || '{}'); } catch (e) { return {}; } };
+  const readCat = () => {
+    try { const c = JSON.parse(localStorage.getItem(KC)); if (Array.isArray(c)) return c; } catch (e) {}
+    return (window.RDP_CATALOG || []).map(r => ({id: slugId(r.nombre), nombre: r.nombre, area: r.area || ''}));
+  };
+  const writeCat = c => { try { localStorage.setItem(KC, JSON.stringify(c)); } catch (e) { throw new Error('almacenamiento no disponible'); } };
   return {
     mode: 'local',
     async save(key, doc) {
@@ -729,7 +752,11 @@ function createStore() {
     subscribe(cb) {
       this._cb = cb;
       cb(Object.entries(read()).map(([_id, d]) => ({_id, ...d})));
-    }
+    },
+    subscribeCatalog(cb) { this._catCb = cb; cb(readCat()); },
+    async checkAdmin() { return {ok: true}; },
+    async addCircle(c) { const l = readCat(); l.push(c); writeCat(l); this._catCb(l); },
+    async removeCircle(id) { const l = readCat().filter(r => r.id !== id); writeCat(l); this._catCb(l); }
   };
 }
 
@@ -886,9 +913,90 @@ function bandColor(pct) {
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
+function onCircleInput(e) {
+  const val = e.target.value.trim();
+  if (val !== state.circle) {
+    state.circle = val;
+    state.scores = {};
+    document.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('sel'));
+    document.querySelectorAll('.crit-card').forEach(c => c.classList.remove('done'));
+    updateTotal();
+    if (val.length >= 2) {
+      document.getElementById('criteriaWrap').hidden = false;
+      loadExisting();
+    } else {
+      document.getElementById('criteriaWrap').hidden = true;
+    }
+  }
+  updateSubmit();
+}
+
+var catalogData = [];
+function applyCatalog(list) {
+  catalogData = (list || []).filter(r => r && r.nombre);
+  let el = document.getElementById('circleInput');
+  if (catalogData.length && el.tagName !== 'SELECT') {
+    const sel = document.createElement('select');
+    sel.id = 'circleInput'; sel.className = 'text-input';
+    el.replaceWith(sel); sel.addEventListener('input', onCircleInput);
+  } else if (!catalogData.length && el.tagName === 'SELECT') {
+    const inp = document.createElement('input');
+    inp.id = 'circleInput'; inp.className = 'text-input'; inp.type = 'text';
+    inp.placeholder = 'Ej: UET2 — Quemadores'; inp.autocomplete = 'off';
+    el.replaceWith(inp); inp.addEventListener('input', onCircleInput);
+  }
+  refreshCircleOptions(); renderResults(); renderAdminList();
+}
+
+// ── Administración del catálogo ──
+var adminKey = "";
+function slugId(s) { return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 100) || 'rdp'; }
+function showAdmin(on) {
+  document.getElementById('admLock').hidden = on;
+  document.getElementById('admPanel').hidden = !on;
+  if (on) renderAdminList();
+}
+async function admUnlock() {
+  if (!db) return;
+  const k = document.getElementById('admKey').value;
+  try {
+    await db.checkAdmin(k);
+    adminKey = k; try { sessionStorage.setItem('rdp_adm', k); } catch(e){}
+    showAdmin(true); toast('✅ Administración habilitada');
+  } catch (e) { toast(e.message); }
+}
+function admLock() {
+  adminKey = ''; try { sessionStorage.removeItem('rdp_adm'); } catch(e){}
+  document.getElementById('admKey').value = ''; showAdmin(false);
+}
+async function admAdd() {
+  const nombre = document.getElementById('admNombre').value.trim();
+  const area = document.getElementById('admArea').value.trim();
+  if (nombre.length < 2) { toast('Escribí el nombre del RDP'); return; }
+  const id = slugId(nombre);
+  if (catalogData.some(r => r.id === id)) { toast('Ese RDP ya está en la lista'); return; }
+  try {
+    await db.addCircle({id, nombre, area}, adminKey);
+    document.getElementById('admNombre').value = ''; document.getElementById('admArea').value = '';
+    toast('✅ RDP agregado');
+  } catch (e) { toast(e.message); }
+}
+async function admDel(id) {
+  const r = catalogData.find(x => x.id === id);
+  if (!r || !confirm('¿Quitar "' + r.nombre + '" de la lista?\nLas evaluaciones ya cargadas no se borran.')) return;
+  try { await db.removeCircle(id, adminKey); toast('RDP quitado'); } catch (e) { toast(e.message); }
+}
+function renderAdminList() {
+  const el = document.getElementById('admList');
+  if (!el) return;
+  el.innerHTML = catalogData.length ? catalogData.map(r =>
+    `<div class="adm-row"><div class="rank-body"><div class="rank-name">${esc(r.nombre)}</div>${r.area ? `<div class="rank-eval-names">${esc(r.area)}</div>` : ''}</div><button class="del-btn" onclick="admDel('${esc(r.id)}')">Quitar</button></div>`
+  ).join('') : '<div class="empty-state" style="padding:24px"><div class="empty-text">Todavía no hay RDP cargados.</div></div>';
+}
+
 function refreshCircleOptions() {
   const sel = document.getElementById('circleInput');
-  const cat = (window.RDP_CATALOG || []).filter(r => r && r.nombre);
+  const cat = catalogData;
   if (!sel || sel.tagName !== 'SELECT') return;
   const me = (state.name || '').toLowerCase();
   const done = new Set(allEvals.filter(e => me && (e.evaluador || '').toLowerCase() === me).map(e => (e.circle || '').toLowerCase()));
@@ -901,7 +1009,7 @@ function refreshCircleOptions() {
 }
 
 function pendingHtml() {
-  const cat = (window.RDP_CATALOG || []).filter(r => r && r.nombre);
+  const cat = catalogData;
   const evaluated = new Set(allEvals.map(e => (e.circle || '').toLowerCase()));
   const pend = cat.filter(r => !evaluated.has(r.nombre.toLowerCase()));
   if (!pend.length) return '';
@@ -1014,6 +1122,8 @@ function switchTab(tab) {
   document.getElementById('paneRes').classList.toggle('active', tab==='res');
   document.getElementById('tabEval').classList.toggle('active', tab==='eval');
   document.getElementById('tabRes').classList.toggle('active', tab==='res');
+  document.getElementById('paneAdm').classList.toggle('active', tab==='adm');
+  document.getElementById('tabAdm').classList.toggle('active', tab==='adm');
 }
 
 let _toastTimer;
